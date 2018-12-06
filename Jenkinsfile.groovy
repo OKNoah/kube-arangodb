@@ -150,6 +150,18 @@ pipeline {
             }
         }
         stage('Test') {
+            stages {
+                stage('A') {
+                    script {
+                        echo "In stage A"
+                    }
+                }
+                stage('B') {
+                    script {
+                        echo "In stage A"
+                    }
+                }
+            }
             steps {
                 script {
                     def myParams = fetchParamsFromGitLog();
