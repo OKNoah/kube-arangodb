@@ -127,42 +127,40 @@ def buildCleanupSteps(Map myParams, String kubeConfigRoot, String kubeconfig) {
     }
 }
 
+def printStep(String msg) {
+    return {
+        steps {
+            script {
+                echo msg
+            }
+        }
+    }
+}
+
 pipeline {
     stages {
-        stage('Build') { 
-            echo "Build!"
+        stage('Build') {
+            printStep("Build!")
         }
         stage('Test') {
             parallel {
                 stage('A') {
-                    echo "A"
+                    printStep("A")
                 }
                 stage('B') {
-                    echo "B"
+                    printStep("B")
                 }
                 stage('parallel') {
                     parallel {
                         stage('parallel.1') {
-                            echo "1"
+                            printStep("1")
                         }
                         stage('parallel.2') {
-                            echo "2"
+                            printStep("2")
                         }
                     }
                 }
             }
-        }
-    }
-
-    post {
-        always {
-            echo "Post!"
-        }
-        failure {
-            echo "Failure!"
-        }
-        success {
-            echo "Success!"
         }
     }
 }
