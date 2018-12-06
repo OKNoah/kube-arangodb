@@ -140,23 +140,43 @@ def printStep(String msg) {
 pipeline {
     stages {
         stage('Build') {
-            printStep("Build!")
+            steps {
+                script {
+                    echo "Build!"
+                }
+            }
         }
         stage('Test') {
             parallel {
                 stage('A') {
-                    printStep("A")
+                    steps {
+                        script {
+                            echo "A"
+                        }
+                    }
                 }
                 stage('B') {
-                    printStep("B")
+                    steps {
+                        script {
+                            echo "B"
+                        }
+                    }
                 }
                 stage('parallel') {
                     parallel {
                         stage('parallel.1') {
-                            printStep("1")
+                            steps {
+                                script {
+                                    echo "1"
+                                }
+                            }
                         }
                         stage('parallel.2') {
-                            printStep("2")
+                            steps {
+                                script {
+                                    echo "2"
+                                }
+                            }
                         }
                     }
                 }
