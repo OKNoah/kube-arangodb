@@ -230,14 +230,14 @@ $(BIN): $(GOBUILDDIR) $(CACHEVOL) $(SOURCES) dashboard/assets.go
 
 
 .PHONY: docker
-docker: docker-operator
+docker: check-vars docker-operator
 	docker build -f $(DOCKERFILE) -t $(OPERATORIMAGE) .
 ifdef PUSHIMAGES
 	docker push $(OPERATORIMAGE)
 endif
 
 .PHONY: docker-operator
-docker-operator: check-vars $(BIN)
+docker-operator: $(BIN)
 	docker build -f $(DOCKERFILE) -t $(OPERATORIMAGE)
 
 
