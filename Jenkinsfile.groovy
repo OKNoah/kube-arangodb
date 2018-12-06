@@ -128,6 +128,47 @@ def buildCleanupSteps(Map myParams, String kubeConfigRoot, String kubeconfig) {
 }
 
 pipeline {
+    stages {
+        stage('Build') { 
+            echo "Build!"
+        }
+        stage('Test') {
+            parallel {
+                stage('A') {
+                    echo "A"
+                }
+                stage('B') {
+                    echo "B"
+                }
+                stage('parallel') {
+                    parallel {
+                        stage('parallel.1') {
+                            echo "1"
+                        }
+                        stage('parallel.2') {
+                            echo "2"
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    post {
+        always {
+            echo "Post!"
+        }
+        failure {
+            echo "Failure!"
+        }
+        success {
+            echo "Success!"
+        }
+    }
+}
+
+/*
+pipeline {
     options {
         buildDiscarder(logRotator(daysToKeepStr: '7', numToKeepStr: '10'))
         lock resource: 'kube-arangodb'
@@ -189,3 +230,4 @@ pipeline {
         }
     }
 }
+*/
