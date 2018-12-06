@@ -77,7 +77,7 @@ def buildBuildSteps(Map myParams) {
     }
 }
 
-def buildTestSteps(Map myParams, String kubeConfigRoot, String kubeconfig) {
+def buildTestStepsSpecificVersion(Map myParams, String kubeConfigRoot, String kubeconfig, String arangoVersion) {
     return {
         timestamps {
             timeout(time: myParams.LONG ? 180 : 30) {
@@ -97,7 +97,9 @@ def buildTestSteps(Map myParams, String kubeConfigRoot, String kubeconfig) {
                     "LONG=${myParams.LONG ? 1 : 0}",
                     "TESTOPTIONS=${myParams.TESTOPTIONS}",
                     ]) {
-                        sh "make run-tests"
+                        lock(label: "${kubeconfig}", quantity: 1)
+                        // echo "${kubeconfig} - ${arangoVersion}"
+                        // sh "make run-tests"
                     }
                 }
             }
@@ -105,7 +107,20 @@ def buildTestSteps(Map myParams, String kubeConfigRoot, String kubeconfig) {
     }
 }
 
-def buildCleanupSteps(Map myParams, String kubeConfigRoot, String kubeconfig) {
+// def buildTestSteps(Map myParams, String kubeConfigRoot, String kubeconfig, String versionConfigs) {
+//     def versionConfigList = versionConfigs.split(",")
+//     def testTasks = [:]
+//     for (versionconfig in versionConfigList){
+//         testTasks["${versionconfig}"] = buildTestStepsSpecificVersion(myParams, kubeConfigRoot, kubeconfig, versionconfig )
+//     }
+//     return { node {
+//             lock(resource: "${kubeconfig}")
+//             parallel testTasks
+//         }
+//     }
+// }
+
+def buildCleanupSteps(Map myParams, String kubeConfigRoot, String kubeconfig ) {
     return {
         timestamps {
             timeout(time: 15) {
@@ -133,6 +148,7 @@ pipeline {
       booleanParam(name: 'LONG', defaultValue: false, description: 'Execute long running tests')
       string(name: 'DOCKERNAMESPACE', defaultValue: 'arangodb', description: 'DOCKERNAMESPACE sets the docker registry namespace in which the operator docker image will be pushed', )
       string(name: 'KUBECONFIGS', defaultValue: 'kube-ams1,scw-183a3b', description: 'KUBECONFIGS is a comma separated list of Kubernetes configuration files (relative to /home/jenkins/.kube) on which the tests are run', )
+      string(name: 'ARANGOVERSIONS', defaultValue: '3.3,3.4', description: 'ARANGOVERSIONS is a comma separated list of versions to test against', )
       string(name: 'TESTNAMESPACE', defaultValue: 'jenkins', description: 'TESTNAMESPACE sets the kubernetes namespace to ru tests in (this must be short!!)', )
       string(name: 'ENTERPRISEIMAGE', defaultValue: '', description: 'ENTERPRISEIMAGE sets the docker image used for enterprise tests', )
       string(name: 'ARANGODIMAGE', defaultValue: '', description: 'ARANGODIMAGE sets the docker image used for tests (except enterprise and update tests)', )
@@ -145,7 +161,7 @@ pipeline {
                 script {
                     def myParams = fetchParamsFromGitLog();
                     def buildSteps = buildBuildSteps(myParams);
-                    buildSteps();
+                    // buildSteps();
                 }
             }
         }
@@ -156,7 +172,7 @@ pipeline {
                     def configs = "${myParams.KUBECONFIGS}".split(",")
                     def testTasks = [:]
                     for (kubeconfig in configs) {
-                        testTasks["${kubeconfig}"] = buildTestSteps(myParams, kubeConfigRoot, kubeconfig)
+                        testTasks["${kubeconfig}"] = buildTestStepsSpecificVersion(myParams, kubeConfigRoot, kubeconfig, "${myParams.ARANGOVERSIONS}" )
                     }
                     parallel testTasks
                 }
@@ -173,7 +189,7 @@ pipeline {
                 for (kubeconfig in configs) {
                     cleanupTasks["${kubeconfig}"] = buildCleanupSteps(myParams, kubeConfigRoot, kubeconfig)
                 }
-                parallel cleanupTasks
+                // parallel cleanupTasks
             }
         }
         failure {
