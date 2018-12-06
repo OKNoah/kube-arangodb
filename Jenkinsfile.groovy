@@ -107,16 +107,20 @@ def buildTestSteps(Map myParams, String kubeConfigRoot, String kubeconfig) {
 
 def buildCleanupSteps(Map myParams, String kubeConfigRoot, String kubeconfig) {
     return {
-        timestamps {
-            timeout(time: 15) {
-                withEnv([
-                    "DEPLOYMENTNAMESPACE=${myParams.TESTNAMESPACE}-${env.GIT_COMMIT}",
-                    "DOCKERNAMESPACE=${myParams.DOCKERNAMESPACE}",
-                    "KUBECONFIG=${kubeConfigRoot}/${kubeconfig}",
-                ]) {
-                    sh "./scripts/collect_logs.sh ${env.DEPLOYMENTNAMESPACE} ${kubeconfig}" 
-                    archive includes: 'logs/*'
-                    sh "make cleanup-tests"
+        stage(kubeconfig) {
+            steps {
+                timestamps {
+                    timeout(time: 15) {
+                        withEnv([
+                            "DEPLOYMENTNAMESPACE=${myParams.TESTNAMESPACE}-${env.GIT_COMMIT}",
+                            "DOCKERNAMESPACE=${myParams.DOCKERNAMESPACE}",
+                            "KUBECONFIG=${kubeConfigRoot}/${kubeconfig}",
+                        ]) {
+                            sh "./scripts/collect_logs.sh ${env.DEPLOYMENTNAMESPACE} ${kubeconfig}" 
+                            archive includes: 'logs/*'
+                            sh "make cleanup-tests"
+                        }
+                    }
                 }
             }
         }
@@ -150,33 +154,15 @@ pipeline {
             }
         }
         stage('Test') {
-            stages {
-                stage('A') {
-                    steps {
-                        script {
-                            echo "In stage A"
-                        }
+            steps {
+                script {
+                    def myParams = fetchParamsFromGitLog();
+                    def configs = "${myParams.KUBECONFIGS}".split(",")
+                    def testTasks = [:]
+                    for (kubeconfig in configs) {
+                        testTasks["${kubeconfig}"] = buildTestSteps(myParams, kubeConfigRoot, kubeconfig)
                     }
-                }
-                stage('B') {
-                    steps {
-                        script {
-                            echo "In stage A"
-                        }
-                    }
-                }
-                stage('Go') {
-                    steps {
-                        script {
-                            def myParams = fetchParamsFromGitLog();
-                            def configs = "${myParams.KUBECONFIGS}".split(",")
-                            def testTasks = [:]
-                            for (kubeconfig in configs) {
-                                testTasks["${kubeconfig}"] = buildTestSteps(myParams, kubeConfigRoot, kubeconfig)
-                            }
-                            parallel testTasks
-                        }
-                    }
+                    parallel testTasks
                 }
             }
         }
