@@ -152,25 +152,31 @@ pipeline {
         stage('Test') {
             stages {
                 stage('A') {
-                    script {
-                        echo "In stage A"
+                    steps {
+                        script {
+                            echo "In stage A"
+                        }
                     }
                 }
                 stage('B') {
-                    script {
-                        echo "In stage A"
+                    steps {
+                        script {
+                            echo "In stage A"
+                        }
                     }
                 }
-            }
-            steps {
-                script {
-                    def myParams = fetchParamsFromGitLog();
-                    def configs = "${myParams.KUBECONFIGS}".split(",")
-                    def testTasks = [:]
-                    for (kubeconfig in configs) {
-                        testTasks["${kubeconfig}"] = buildTestSteps(myParams, kubeConfigRoot, kubeconfig)
+                stage('Go') {
+                    steps {
+                        script {
+                            def myParams = fetchParamsFromGitLog();
+                            def configs = "${myParams.KUBECONFIGS}".split(",")
+                            def testTasks = [:]
+                            for (kubeconfig in configs) {
+                                testTasks["${kubeconfig}"] = buildTestSteps(myParams, kubeConfigRoot, kubeconfig)
+                            }
+                            parallel testTasks
+                        }
                     }
-                    parallel testTasks
                 }
             }
         }
