@@ -96,7 +96,7 @@ def buildTestSteps(String platformStr, String imageStr, String editionStr) {
                             def version = arango[i]
 
                             if (true || version.containsKey(e)) {
-                                def image = version(e)
+                                def image = version[e]
                                 def stepName = "${p}-${i}-${e}"
 
                                 def env = [:]
