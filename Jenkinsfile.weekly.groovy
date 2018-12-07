@@ -1,58 +1,3 @@
-def notifySlack(String buildStatus = 'STARTED') {
-    // Build status of null means success.
-    buildStatus = buildStatus ?: 'SUCCESS'
-
-    def color
-
-    if (buildStatus == 'STARTED') {
-        color = '#D4DADF'
-    } else if (buildStatus == 'SUCCESS') {
-        color = '#BDFFC3'
-    } else if (buildStatus == 'UNSTABLE') {
-        color = '#FFFE89'
-    } else {
-        color = '#FF9FA1'
-    }
-
-    def msg = "${buildStatus}: `${env.JOB_NAME}` #${env.BUILD_NUMBER}: ${env.GIT_COMMIT}\n${env.BUILD_URL}"
-
-    slackSend(color: color, channel: '#status-k8s', message: msg)
-}
-
-def fetchParamsFromGitLog() {
-    def myParams = [:];
-    // Copy configured params 
-    for (entry in params) {
-        myParams[entry.key] = entry.value;
-    }
-
-    // Is this a LONG test?
-    if ("${env.JOB_NAME}" == "kube-arangodb-long") {
-        myParams["LONG"] = true;
-        myParams["KUBECONFIGS"] = "gke-jenkins-1";
-    }
-
-    // Fetch params configured in git commit messages 
-    // Syntax: [ci OPT=value]
-    // Example: [ci TESTOPTIONS="-test.run ^TestSimpleSingle$"]
-    def options = sh(returnStdout: true, script: "git log --reverse remotes/origin/master..HEAD | grep -o \'\\[ci[^\\[]*\\]\' | sed -E \'s/\\[ci (.*)\\]/\\1/\'").trim().split("\n")
-    for (opt in options) {
-        def idx = opt.indexOf('=');
-        if (idx > 0) {
-            def key = opt.substring(0, idx);
-            def value = opt.substring(idx+1).replaceAll('^\"|\"$', '');
-            myParams[key] = value;
-            //println("Overwriting myParams.${key} with ${value}");
-        }
-    }
-
-    // Show params in log
-    for (entry in myParams) {
-        println("Using myParams.${entry.key} with ${entry.value}");
-    }
-
-    return myParams;
-}
 
 def kubeConfigRoot = "/home/jenkins/.kube"
 
@@ -92,7 +37,7 @@ def buildTestSteps(Map myParams, String kubeConfigRoot, String kubeconfig) {
                     "ENTERPRISEIMAGE=${myParams.ENTERPRISEIMAGE}",
                     "ENTERPRISELICENSE=${myParams.ENTERPRISELICENSE}",
                     "ARANGODIMAGE=${myParams.ARANGODIMAGE}",
-                    "IMAGETAG=jenkins-test",
+                    "IMAGETAG=jenkins-test-weekly",
                     "KUBECONFIG=${kubeConfigRoot}/${kubeconfig}",
                     "LONG=${myParams.LONG ? 1 : 0}",
                     "TESTOPTIONS=${myParams.TESTOPTIONS}",
@@ -127,14 +72,70 @@ def buildCleanupSteps(Map myParams, String kubeConfigRoot, String kubeconfig) {
     }
 }
 
-def printStep(String msg) {
-    return {
-        steps {
-            script {
-                echo msg
+def buildTestSteps(String platformStr, String imageStr, String editionStr) {
+    def tasks = [:]
+
+    def platforms = platformStr.split(',')
+    def images = imageStr.split(',')
+    def editions = editionStr.split(',')
+
+    configFileProvider([
+        configFile(fileId: 'arangodb-images', variable: 'ARANGODB_IMAGES_FILE'),
+        configFile(fileId: 'k8s-cluster', variable: 'ARANGODB_K8S_FILE')
+    ]) {
+        def k8s = readJSON file: env.ARANGODB_IMAGES_FILE
+        def arango = readJSON file: env.ARANGODB_IMAGES_FILE
+
+        for (p in platforms) {
+            for (i in images) {
+                for (e in editions) {
+                    if k8s.containsKey(p) {
+                        def platform = k8s[p]
+
+                        if arango.containsKey(i) {
+                            def version = arango[i]
+
+                            if version.containsKey(e) {
+                                def image = version(e)
+                                def stepName = "${p}-${i}-${e}"
+
+                                def env = [:]
+                                if image.containsKey('env') {
+
+                                }
+
+                                tasks[stepName] = {
+                                    stage(stepName) {
+                                        steps {
+                                            script {
+                                                echo "${stepName}"
+                                            }
+                                        }
+                                    }
+                                }
+
+
+                            } else {
+                                println("Unkown edition ${e}")
+                            }
+                        } else {
+                            println("Unknown image ${i}")
+                        }
+                    } else {
+                        println("Unknown platform ${p}")
+                    }
+                }
             }
         }
     }
+
+
+
+    return tasks
+}
+
+def buildCleanupSteps(String platform, String image, String edition) {
+
 }
 
 pipeline {
@@ -144,58 +145,26 @@ pipeline {
     }
     agent any
     parameters {
-      booleanParam(name: 'LONG', defaultValue: false, description: 'Execute long running tests')
+      /*booleanParam(name: 'LONG', defaultValue: false, description: 'Execute long running tests')
       string(name: 'DOCKERNAMESPACE', defaultValue: 'arangodb', description: 'DOCKERNAMESPACE sets the docker registry namespace in which the operator docker image will be pushed', )
       string(name: 'KUBECONFIGS', defaultValue: 'kube-ams1,scw-183a3b', description: 'KUBECONFIGS is a comma separated list of Kubernetes configuration files (relative to /home/jenkins/.kube) on which the tests are run', )
       string(name: 'TESTNAMESPACE', defaultValue: 'jenkins', description: 'TESTNAMESPACE sets the kubernetes namespace to ru tests in (this must be short!!)', )
       string(name: 'ENTERPRISEIMAGE', defaultValue: '', description: 'ENTERPRISEIMAGE sets the docker image used for enterprise tests', )
       string(name: 'ARANGODIMAGE', defaultValue: '', description: 'ARANGODIMAGE sets the docker image used for tests (except enterprise and update tests)', )
-      string(name: 'ENTERPRISELICENSE', defaultValue: '', description: 'ENTERPRISELICENSE sets the enterprise license key for enterprise tests', )
-      string(name: 'TESTOPTIONS', defaultValue: '', description: 'TESTOPTIONS is used to pass additional test options to the integration test', )
+      string(name: 'ENTERPRISELICENSE', defaultValue: '', description: 'ENTERPRISELICENSE sets the enterprise license key for enterprise tests', )*/
+      string(name: 'images', defaultValue: '')
+      string(name: 'platforms', defaultValue: '')
+      string(name: 'editions', defaultValue: '')
     }
     stages {
-        stage('Build') {
-            steps {
-                script {
-                    def myParams = fetchParamsFromGitLog();
-                    def buildSteps = buildBuildSteps(myParams);
-                    buildSteps();
-                }
-            }
-        }
         stage('Test') {
             steps {
                 script {
-                    def myParams = fetchParamsFromGitLog();
-                    def configs = "${myParams.KUBECONFIGS}".split(",")
-                    def testTasks = [:]
-                    for (kubeconfig in configs) {
-                        testTasks["${kubeconfig}"] = buildTestSteps(myParams, kubeConfigRoot, kubeconfig)
-                    }
-                    parallel testTasks
+                    parallel buildTestSteps()
                 }
             }
         }
     }
 
-    post {
-        always {
-            script {
-                def myParams = fetchParamsFromGitLog();
-                def configs = "${myParams['KUBECONFIGS']}".split(",")
-                def cleanupTasks = [:]
-                for (kubeconfig in configs) {
-                    cleanupTasks["${kubeconfig}"] = buildCleanupSteps(myParams, kubeConfigRoot, kubeconfig)
-                }
-                parallel cleanupTasks
-            }
-        }
-        failure {
-            notifySlack('FAILURE')
-        }
 
-        success {
-            notifySlack('SUCCESS')
-        }
-    }
 }
