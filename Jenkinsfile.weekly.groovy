@@ -116,13 +116,13 @@ def buildTestSteps(String platformStr, String imageStr, String editionStr) {
 
 
                             } else {
-                                println("Unkown edition ${e}")
+                                println("Unkown edition `${e}`")
                             }
                         } else {
-                            println("Unknown image ${i}")
+                            println("Unknown image `${i}`")
                         }
                     } else {
-                        println("Unknown platform ${p}")
+                        println("Unknown platform `${p}`")
                     }
                 }
             }
