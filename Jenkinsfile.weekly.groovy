@@ -1,6 +1,6 @@
 
 def kubeConfigRoot = "/home/jenkins/.kube"
-
+/*
 def buildBuildSteps(Map myParams) {
     return {
         timestamps {
@@ -70,7 +70,7 @@ def buildCleanupSteps(Map myParams, String kubeConfigRoot, String kubeconfig) {
             }
         }
     }
-}
+}*/
 
 def buildTestSteps(String platformStr, String imageStr, String editionStr) {
     def tasks = [:]
@@ -158,7 +158,8 @@ pipeline {
         stage('Test') {
             steps {
                 script {
-                    parallel buildTestSteps()
+                    def tasks = buildTestSteps()
+                    parallel tasks
                 }
             }
         }
