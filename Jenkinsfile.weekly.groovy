@@ -158,7 +158,7 @@ pipeline {
         stage('Test') {
             steps {
                 script {
-                    def tasks = buildTestSteps()
+                    def tasks = buildTestSteps(param.platforms, param.images, param.editions)
                     parallel tasks
                 }
             }
