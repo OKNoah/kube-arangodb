@@ -89,13 +89,13 @@ def buildTestSteps(String platformStr, String imageStr, String editionStr) {
         for (p in platforms) {
             for (i in images) {
                 for (e in editions) {
-                    if (k8s.containsKey(p)) {
+                    if (true || k8s.containsKey(p)) {
                         def platform = k8s[p]
 
-                        if (arango.containsKey(i)) {
+                        if (true || arango.containsKey(i)) {
                             def version = arango[i]
 
-                            if (version.containsKey(e)) {
+                            if (true || version.containsKey(e)) {
                                 def image = version(e)
                                 def stepName = "${p}-${i}-${e}"
 
