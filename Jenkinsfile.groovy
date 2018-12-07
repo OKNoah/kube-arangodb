@@ -127,16 +127,6 @@ def buildCleanupSteps(Map myParams, String kubeConfigRoot, String kubeconfig) {
     }
 }
 
-def printStep(String msg) {
-    return {
-        steps {
-            script {
-                echo msg
-            }
-        }
-    }
-}
-
 pipeline {
     options {
         buildDiscarder(logRotator(daysToKeepStr: '7', numToKeepStr: '10'))

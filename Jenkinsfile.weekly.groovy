@@ -105,12 +105,8 @@ def buildTestSteps(String platformStr, String imageStr, String editionStr) {
                                 }
 
                                 tasks[stepName] = {
-                                    stage(stepName) {
-                                        steps {
-                                            script {
-                                                echo "${stepName}"
-                                            }
-                                        }
+                                    script {
+                                        echo "${stepName}"
                                     }
                                 }
 
